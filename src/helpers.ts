@@ -42,6 +42,11 @@ export async function getAllSettings(context: Context | TriggerContext) {
     return settingsSchema.parse(await context.settings.getAll<AppSettings>());
 }
 
+export function isIgnoredUser(username: string, settings: AppSettings) {
+    return settings.ignoredUsers
+        .some(ignoredUser => ignoredUser.toLowerCase() === username.toLowerCase());
+}
+
 function nonNullable<T>(value: T): value is NonNullable<T> {
     return value !== null;
 }

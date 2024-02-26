@@ -1,5 +1,5 @@
 import { Devvit } from '@devvit/public-api';
-import { findSourcesInPost, getAllSettings, processPost, submitComment, trySendPostErrorModmail, validateSetting } from './index.js';
+import { findSourcesInPost, getAllSettings, isIgnoredUser, processPost, submitComment, trySendPostErrorModmail, validateSetting } from './index.js';
 
 Devvit.configure({ redditAPI: true });
 
@@ -89,7 +89,7 @@ Devvit.addTrigger({
     onEvent: async (event, context) => {
         try {
             if (!event.post?.id || !event.subreddit?.name || !event.author?.name) {
-                throw new Error('PostSubmit event missing post ID or subreddit name');
+                throw new Error('PostSubmit event missing post id, subreddit name or author name.');
             }
 
             const post = event.post.crosspostParentId
@@ -99,7 +99,7 @@ Devvit.addTrigger({
             const postData = processPost(post);
             const settings = await getAllSettings(context);
 
-            if (settings.ignoredUsers.includes(event.author.name.toLocaleLowerCase())) {
+            if (isIgnoredUser(event.author.name, settings)) {
                 return;
             }
 
