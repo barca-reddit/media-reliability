@@ -97,10 +97,18 @@ describe('isDomainInUrl', () => {
             ['https://en.m.foo.com', true],
             ['https://foo.com/', true],
             ['https://foo.com/path', true],
-            ['https://foo.com/path/~stuff?param=1', true],
+            ['https://www.foo.com', true],
+            ['https://www.en.foo.com', true],
+            ['https://www.en.m.foo.com', true],
+            ['https://www.foo.com/', true],
+            ['https://www.foo.com/path', true],
+            ['https://www.foo.com/path/~stuff?param=1', true],
             ['https://foos.com', false],
             ['https://us.foo.com', false],
             ['https://en.x.foo.com', false],
+            ['https://www.foos.com', false],
+            ['https://www.us.foo.com', false],
+            ['https://www.en.x.foo.com', false],
         ] as const;
 
         const result = entries.map(([url]) => isDomainInUrl({ url: new URL(url), source }));
