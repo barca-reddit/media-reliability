@@ -115,8 +115,14 @@ function isTwitterInUrl({ url, source }: { url: URL, source: Source }) {
         : false;
 }
 
+/**
+ * The URL constructor returns the hostname with www. prefix if present,
+ * so we need to remove it before we compare to source domains.
+ */
 function isDomainInUrl({ url, source }: { url: URL, source: Source }) {
-    return source.domains?.includes(url.hostname);
+    const domainNormalized = url.hostname.replace(/^www\./, '');
+
+    return source.domains?.includes(domainNormalized);
 }
 
 function isTwitterInLinks({ urls, source }: { urls: URL[], source: Source }) {
