@@ -33,38 +33,57 @@ function createSource(params: CreateSourceParams) {
     })) satisfies Source;
 }
 
+describe('normalization', () => {
+    test('normalizeName', () => {
+        const source = createSource({ name: 'fÓÓNamE' });
+        expect(source.nameNormalized).toEqual('fooname');
+    });
+
+    test('normalizeTwitter', () => {
+        const source = createSource({ twitter: 'fÓÓTwitteR' });
+        expect(source.twitterNormalized).toEqual('footwitter');
+    });
+});
+
 describe('isNameInTitle', () => {
     test('source.nameNormalized', () => {
-        const source = createSource({ name: 'fÓÓ' });
+        const source = createSource({ name: 'FÓÓNäMê', nameIsCommon: false });
         const entries = [
-            ['title with foo in it', true],
-            ['title with fÓo in it', true],
-            ['title with foo in it', true],
-            ['title with (foo) in it', true],
-            ['title with [foo] in it', true],
-            ['title with foos in it', false],
-            ['title with fÓos in it', false],
-            ['title with foos in it', false],
-            ['title with (foos) in it', false],
-            ['title with [foos] in it', false],
+            ['fooName: rest of the title', true],
+            ['title with fooName in it', true],
+            ['title with (fooName) in it', true],
+            ['title with [fooName] in it', true],
+            ['foo: rest of the title', false],
+            ['title with foo in it', false],
+            ['title with (foo) in it', false],
+            ['title with [foo] in it', false],
+            ['fooNameX: rest of the title', false],
+            ['title with fooNameX in it', false],
+            ['title with (fooNameX) in it', false],
+            ['title with [fooNameX] in it', false],
+            ['xFooName: rest of the title', false],
+            ['title with xFooName in it', false],
+            ['title with (xFooName) in it', false],
+            ['title with [xFooName] in it', false],
         ] as const;
 
         const result = entries.map(([title]) => isNameInTitle({ titleNormalized: normalizeText(title), source }));
         expect(result).toEqual(entries.map(([_, expected]) => expected));
     });
 
-    test('source.nameNormalized | source.nameIsCommon', () => {
-        const source = createSource({ name: 'fÓÓ', nameIsCommon: true });
+    test('source.nameNormalized (nameIsCommon)', () => {
+        const source = createSource({ name: 'FÓÓNäMê', nameIsCommon: true });
         const entries = [
-            ['Foo: title with bar in it', true],
-            ['title with [Foo] in it', true],
-            ['title with (Foo) in it', true],
-            ['fÓÓ: title with bar in it', true],
-            ['title with [fÓÓ] in it', true],
-            ['title with (fÓÓ) in it', true],
-            ['title with foo in it', false],
-            ['title with fÓÓ in it', false],
-            ['foo title with bar in it', false],
+            ['fooName: rest of the title', true],
+            ['title with [fooName] in it', true],
+            ['title with (fooName) in it', true],
+            ['title with fooName in it', false],
+            ['fooNameX: rest of the title', false],
+            ['title with [fooNameX] in it', false],
+            ['title with (fooNameX) in it', false],
+            ['xFooName: rest of the title', false],
+            ['title with [xFooName] in it', false],
+            ['title with (xFooName) in it', false],
         ] as const;
 
         const result = entries.map(([title]) => isNameInTitle({ titleNormalized: normalizeText(title), source }));
@@ -73,15 +92,26 @@ describe('isNameInTitle', () => {
 });
 describe('isTwitterInTitle', () => {
     test('source.twitterNormalized', () => {
-        const source = createSource({ twitter: 'fooTwitter' });
+        const source = createSource({ twitter: 'foo_Twitter' });
         const entries = [
-            ['title with fooTwitter in it', true],
-            ['title with @fooTwitter in it', true],
-            ['title with @fÓÓTwitter in it', true],
-            ['title with !!!fÓÓTwitter!!! in it', true],
-            ['title with foosTwitter in it', false],
-            ['title with _fooTwitter in it', false],
-            ['title with twitter in it', false],
+            ['@foo_twitter: rest of the title', true],
+            ['foo_twitter: rest of the title', true],
+            ['title with @foo_twitter in it', true],
+            ['title with (foo_twitter) in it', true],
+            ['title with [foo_twitter] in it', true],
+            ['title with foo_twitter in it', false],
+            ['title with _foo_twitter in it', false],
+            ['title with foo_twitter_ in it', false],
+            ['@foo_twitterX: rest of the title', false],
+            ['foo_twitterX: rest of the title', false],
+            ['title with @foo_twitterX in it', false],
+            ['title with (foo_twitterX) in it', false],
+            ['title with [foo_twitterX] in it', false],
+            ['@Xfoo_twitter: rest of the title', false],
+            ['Xfoo_twitter: rest of the title', false],
+            ['title with @Xfoo_twitter in it', false],
+            ['title with (Xfoo_twitter) in it', false],
+            ['title with [Xfoo_twitter] in it', false],
         ] as const;
 
         const result = entries.map(([title]) => isTwitterInTitle({ titleNormalized: normalizeText(title), source }));
@@ -90,25 +120,28 @@ describe('isTwitterInTitle', () => {
 });
 describe('isDomainInUrl', () => {
     test('source.domains', () => {
-        const source = createSource({ domains: ['foo.com', 'en.foo.com', 'en.m.foo.com'] });
+        const source = createSource({ domains: ['foo.com'] });
         const entries = [
             ['https://foo.com', true],
             ['https://en.foo.com', true],
             ['https://en.m.foo.com', true],
-            ['https://foo.com/', true],
-            ['https://foo.com/path', true],
-            ['https://www.foo.com', true],
-            ['https://www.en.foo.com', true],
-            ['https://www.en.m.foo.com', true],
-            ['https://www.foo.com/', true],
-            ['https://www.foo.com/path', true],
-            ['https://www.foo.com/path/~stuff?param=1', true],
-            ['https://foos.com', false],
-            ['https://us.foo.com', false],
-            ['https://en.x.foo.com', false],
-            ['https://www.foos.com', false],
-            ['https://www.us.foo.com', false],
-            ['https://www.en.x.foo.com', false],
+            ['https://fooX.com', false],
+            ['https://Xfoo.com', false],
+        ] as const;
+
+        const result = entries.map(([url]) => isDomainInUrl({ url: new URL(url), source }));
+        expect(result).toEqual(entries.map(([_, expected]) => expected));
+    });
+
+    test('source.domains (subdomain)', () => {
+        const source = createSource({ domains: ['en.foo.com'] });
+        const entries = [
+            ['https://en.foo.com', true],
+            ['https://m.en.foo.com', true],
+            ['https://en.fooX.com', false],
+            ['https://m.en.fooX.com', false],
+            ['https://en.Xfoo.com', false],
+            ['https://m.en.Xfoo.com', false],
         ] as const;
 
         const result = entries.map(([url]) => isDomainInUrl({ url: new URL(url), source }));
@@ -125,8 +158,9 @@ describe('isTwitterInUrl', () => {
             ['https://x.com/fooTwitter', true],
             ['https://x.com/fooTwitter/status', true],
             ['https://x.com/fooTwitter/status/123', true],
-            ['https://twitter.com/fooTwitters', false],
-            ['https://twitter.com/_fooTwitter/status', false],
+            ['https://twitter.com/fooTwitterX', false],
+            ['https://twitter.com/_fooTwitteX/status', false],
+            ['https://twitter.com/XfooTwitter', false],
         ] as const;
 
         const result = entries.map(([url]) => isTwitterInUrl({ url: new URL(url), source }));
@@ -135,14 +169,18 @@ describe('isTwitterInUrl', () => {
 });
 describe('isDomainInLinks', () => {
     test('source.domains', () => {
-        const source = createSource({ domains: ['foo.com', 'en.foo.com', 'en.m.foo.com'] });
+        const source = createSource({ domains: ['bar.com', 'foo.com'] });
         const entries = [
-            [[new URL('https://foo.com'), new URL('https://bar.com')], true],
-            [[new URL('https://en.foo.com'), new URL('https://bar.com')], true],
-            [[new URL('https://en.m.foo.com'), new URL('https://bar.com')], true],
-            [[new URL('https://foos.com'), new URL('https://bar.com')], false],
-            [[new URL('https://eng.foo.com'), new URL('https://bar.com')], false],
-            [[new URL('https://en.x.foo.com'), new URL('https://bar.com')], false],
+            [[new URL('https://foo.com')], true],
+            [[new URL('https://www.foo.com')], true],
+            [[new URL('https://en.foo.com')], true],
+            [[new URL('https://en.m.foo.com')], true],
+            [[new URL('https://fooX.com')], false],
+            [[new URL('https://en.fooX.com')], false],
+            [[new URL('https://en.m.fooX.com')], false],
+            [[new URL('https://Xfoo.com')], false],
+            [[new URL('https://en.Xfoo.com')], false],
+            [[new URL('https://en.m.Xfoo.com')], false],
         ] satisfies [URL[], boolean][];
 
         const result = entries.map(([urls]) => isDomainInLinks({ urls: urls, source }));
@@ -151,7 +189,7 @@ describe('isDomainInLinks', () => {
 });
 describe('isTwitterInLinks', () => {
     test('source.twitterNormalized', () => {
-        const source = createSource({ twitter: 'fooTwitter' });
+        const source = createSource({ twitter: 'fÓÓTwitteR' });
         const entries = [
             [[new URL('https://twitter.com/fooTwitter'), new URL('https://bar.com')], true],
             [[new URL('https://twitter.com/fooTwitter/status'), new URL('https://bar.com')], true],
@@ -159,10 +197,12 @@ describe('isTwitterInLinks', () => {
             [[new URL('https://x.com/fooTwitter'), new URL('https://bar.com')], true],
             [[new URL('https://x.com/fooTwitter/status'), new URL('https://bar.com')], true],
             [[new URL('https://x.com/fooTwitter/status/123'), new URL('https://bar.com')], true],
-            [[new URL('https://twitter.com/fooTwitters'), new URL('https://bar.com')], false],
-            [[new URL('https://twitter.com/_fooTwitter/status'), new URL('https://bar.com')], false],
-            [[new URL('https://x.com/fooTwitters'), new URL('https://bar.com')], false],
-            [[new URL('https://x.com/_fooTwitter/status'), new URL('https://bar.com')], false],
+            [[new URL('https://twitter.com/fooTwitterX')], false],
+            [[new URL('https://twitter.com/fooTwitterX/status')], false],
+            [[new URL('https://twitter.com/fooTwitterX/status/123')], false],
+            [[new URL('https://twitter.com/xFooTwitter')], false],
+            [[new URL('https://twitter.com/xFooTwitter/status')], false],
+            [[new URL('https://twitter.com/xFooTwitter/status/123')], false],
         ] satisfies [URL[], boolean][];
 
         const result = entries.map(([urls]) => isTwitterInLinks({ urls: urls, source }));
@@ -171,36 +211,29 @@ describe('isTwitterInLinks', () => {
 });
 describe('isNameInBody', () => {
     test('source.nameNormalized', () => {
-        const source = createSource({ name: 'fÓo' });
+        const source = createSource({ name: 'FÓÓNäMê', nameIsCommon: false });
         const entries = [
-            ['post body with\nfoo in it', true],
-            ['post body with\nfÓo in it', true],
-            ['post body with\nfoo in it', true],
-            ['post body with\n(foo) in it', true],
-            ['post body with\n[foo] in it', true],
-            ['post body with\nfoos in it', false],
-            ['post body with\nfÓos in it', false],
-            ['post body with\nfoos in it', false],
-            ['post body with\n(foos) in it', false],
-            ['post body with\n[foos] in it', false],
+            ['post body with\nfooName in it', true],
+            ['post body with\nfooNameX in it', false],
+            ['post body with\nXfooName in it', false],
         ] as const;
 
         const result = entries.map(([body]) => isNameInBody({ bodyNormalized: normalizeText(body), source }));
         expect(result).toEqual(entries.map(([_, expected]) => expected));
     });
 
-    test('source.nameNormalized | source.nameIsCommon', () => {
-        const source = createSource({ name: 'foo', nameIsCommon: true });
+    test('source.nameNormalized (nameIsCommon)', () => {
+        const source = createSource({ name: 'FÓÓNäMê', nameIsCommon: true });
         const entries = [
-            ['Foo: post with bar in it', true],
-            ['post body with \n[Foo] in it', true],
-            ['post body with \n(Foo) in it', true],
-            ['fÓÓ:\n post body with bar in it', true],
-            ['post body with \n[fÓÓ] in it', true],
-            ['post body with \n(fÓÓ) in it', true],
-            ['post body with foo\n in it', false],
-            ['post body with fÓÓ in it', false],
-            ['foo\n post body with bar in it', false],
+            ['fooName: rest of the post body', true],
+            ['post body with\n(fooName) in it', true],
+            ['post body with\n[fooName] in it', true],
+            ['post body with\nfooName in it', false],
+            ['post body with\nfooNameX in it', false],
+            ['post body with\n(fooNameX) in it', false],
+            ['post body with\n(XfooName) in it', false],
+            ['post body with\n[fooNameX] in it', false],
+            ['post body with\n[XfooName] in it', false],
         ] as const;
 
         const result = entries.map(([body]) => isNameInBody({ bodyNormalized: normalizeText(body), source }));
@@ -209,15 +242,21 @@ describe('isNameInBody', () => {
 });
 describe('isTwitterInBody', () => {
     test('source.twitterNormalized', () => {
-        const source = createSource({ twitter: 'fooTwitter' });
+        const source = createSource({ twitter: 'fÓÓ_TwitteR' });
         const entries = [
-            ['post body with\n fooTwitter in it', true],
-            ['post body with\n @fooTwitter in it', true],
-            ['post body with\n @fÓÓTwitter in it', true],
-            ['post body with\n !!!fÓÓTwitter!!! in it', true],
-            ['post body with\n foosTwitter in it', false],
-            ['post body with\n _fooTwitter in it', false],
-            ['post body with\n twitter in it', false],
+            ['foo_twitter: rest of the post body', true],
+            ['@foo_twitter: rest of the post body', true],
+            ['(foo_twitter): rest of the post body', true],
+            ['[@foo_twitter]: rest of the post body', true],
+            ['post body with\n@foo_twitter in it', true],
+            ['post body with\n(foo_twitter) in it', true],
+            ['post body with\n[foo_twitter] in it', true],
+            ['post body with\n@foo_twitterX in it', false],
+            ['post body with\n(foo_twitterX) in it', false],
+            ['post body with\n[foo_twitterX] in it', false],
+            ['post body with\n@Xfoo_twitter in it', false],
+            ['post body with\n(Xfoo_twitter) in it', false],
+            ['post body with\n[Xfoo_twitter] in it', false],
         ] as const;
 
         const result = entries.map(([body]) => isTwitterInBody({ bodyNormalized: normalizeText(body), source }));
