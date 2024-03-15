@@ -1,4 +1,4 @@
 {
     "extends": "@devvit/public-api/devvit.tsconfig.json",
-    "include": ["src", "test", "data/post-data.ts"]
+    "include": ["src", "test"]
 }
