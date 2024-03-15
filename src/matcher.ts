@@ -69,40 +69,52 @@ function findMatchesInBody(bodyNormalized: string, sources: Source[], list: Map<
 }
 
 /**
- * Check if source.name is in the title.
- * If source.nameIsCommon, only match these patterns, otherwise anywhere:
+ * Check if source.nameNormalized matches against a title. Match whole word (name) only.  
+ * If source.nameIsCommon, only match these patterns:  
  * 
- * [name] anywhere in the title
- * (name) anywhere in the title
- * name: at the start of the title
+ * name: rest of the title  
+ * title which includes (name)  
+ * title which includes [name]  
  * 
  * NB: Double escape template literal RegExp
  */
 function isNameInTitle({ titleNormalized, source }: { titleNormalized: string, source: Source }) {
     if (source.nameIsCommon) {
-        return new RegExp(`(${source.nameNormalized}:)|((\\[|\\()${source.nameNormalized}(\\]|\\)))`, 'i').test(titleNormalized);
+        return new RegExp(`^${source.nameNormalized}:|(\\(|\\[)${source.nameNormalized}(\\)|\\])`, 'i').test(titleNormalized);
     }
 
     return new RegExp(`\\b${source.nameNormalized}\\b`, 'i').test(titleNormalized);
 }
 
+/**
+ * Check if source.twitterNormalized matches against a title.  
+ * Only match the following patterns:  
+ * 
+ * twitter_handle: rest of the title  
+ * @twitter_handle: rest of the title  
+ * title which includes (twitter_handle)  
+ * title which includes [twitter_handle]  
+ * title which includes @twitter_handle  
+ * 
+ * NB: Double escape template literal RegExp
+ */
 function isTwitterInTitle({ titleNormalized, source }: { titleNormalized: string, source: Source }) {
     if (!source.twitterNormalized) {
         return false;
     }
 
-    return new RegExp(`\\b${source.twitterNormalized}\\b`, 'i').test(titleNormalized);
+    return new RegExp(`^@?${source.twitterNormalized}:|@${source.twitterNormalized}\\b|(\\(|\\[)${source.twitterNormalized}(\\)|\\])`, 'i').test(titleNormalized);
 }
 
 /**
- * Check if pathname matches the source's twitter handle
- * `pathname` starts with forward slash, so we add it to the regex.
+ * Check if source.twitterNormalized matches against URL pathname.  
+ * Only match the following patterns:  
  * 
- * It should only match:
- * /twitter_handle/status/1234567890
- * /twitter_handle/
- * /twitter_handle
+ * /twitter_handle  
+ * /twitter_handle/  
+ * /twitter_handle/status/12345  
  * 
+ * NB: URL pathname always starts with forward slash  
  * NB: Double escape template literal RegExp
  */
 function isTwitterInUrl({ url, source }: { url: URL, source: Source }) {
@@ -111,20 +123,37 @@ function isTwitterInUrl({ url, source }: { url: URL, source: Source }) {
     }
 
     return ['x.com', 'twitter.com'].includes(url.hostname.toLowerCase())
-        ? new RegExp(`^\/${source.twitterNormalized}(\\/|\\s|$)`, 'i').test(url.pathname)
+        ? new RegExp(`^\\/${source.twitterNormalized}(\\/|\\s|$)`, 'i').test(url.pathname)
         : false;
 }
 
 /**
- * The URL constructor returns the hostname with www. prefix if present,
- * so we need to remove it before we compare to source domains.
+ * Check if source.domains includes URL hostname (domain).
+ * Only match the following patterns:
+ * 
+ * example.com
+ * www.example.com
+ * sub1.example.com
+ * sub1.sub2.example.com
+ * 
+ * NB: The URL constructor does NOT strip out www. prefix if present
+ * NB: Escape periods in domain names
+ * NB: Double escape template literal RegExp
  */
 function isDomainInUrl({ url, source }: { url: URL, source: Source }) {
-    const domainNormalized = url.hostname.replace(/^www\./, '');
-
-    return source.domains?.includes(domainNormalized);
+    return source.domains?.some(domain => new RegExp(`^(.*\\.)?${domain.replace(/\./g, '\\.')}$`).test(url.hostname));
 }
 
+/**
+ * Check if source.twitterNormalized matches against URL list pathnames.
+ * Only match the following patterns:
+ * 
+ * /twitter_handle
+ * /twitter_handle/
+ * /twitter_handle/status/12345
+ * 
+ * NB: Double escape template literal RegExp
+ */
 function isTwitterInLinks({ urls, source }: { urls: URL[], source: Source }) {
     if (!source.twitterNormalized) {
         return false;
@@ -135,28 +164,65 @@ function isTwitterInLinks({ urls, source }: { urls: URL[], source: Source }) {
     return urls.some(url => regex.test(url.pathname));
 }
 
+/**
+ * Check if source.domain includes URL hostnames (domains) list.
+ * Only match the following patterns:
+ * 
+ * example.com
+ * www.example.com
+ * sub1.example.com
+ * sub1.sub2.example.com
+ * 
+ * NB: The URL constructor does NOT strip out www. prefix if present
+ * NB: Escape periods in domain names
+ * NB: Double escape template literal RegExp
+ */
 function isDomainInLinks({ urls, source }: { urls: URL[], source: Source }) {
     if (!source.domains || source.domains.length < 1) {
         return false;
     }
 
-    return urls.some((url) => source.domains?.includes(url.hostname));
+    return urls.some(url => source.domains?.some(domain => new RegExp(`^(.*\\.)?${domain.replace(/\./g, '\\.')}$`).test(url.hostname)));
 }
 
+/**
+ * Check if source.nameNormalized matches against a body. Match whole word (name) only.  
+ * If source.nameIsCommon, only match these patterns:  
+ * 
+ * name: rest of the body  
+ * body which includes (name)  
+ * body which includes [name]  
+ * 
+ * NB: Double escape template literal RegExp  
+ * NB: Use "g" (global) flag to match all occurrences in the body
+ */
 function isNameInBody({ bodyNormalized, source }: { bodyNormalized: string, source: Source }) {
     if (source.nameIsCommon) {
-        return new RegExp(`(${source.nameNormalized}:)|((\\[|\\()${source.nameNormalized}(\\]|\\)))`, 'gi').test(bodyNormalized);
+        return new RegExp(`${source.nameNormalized}:|(\\[|\\()${source.nameNormalized}(\\]|\\))`, 'gi').test(bodyNormalized);
     }
 
     return new RegExp(`\\b${source.nameNormalized}\\b`, 'gi').test(bodyNormalized);
 }
 
+/**
+ * Check if source.twitterNormalized matches against a body.  
+ * Only match the following patterns:  
+ * 
+ * twitter_handle: rest of the body  
+ * @twitter_handle: rest of the body  
+ * body which includes (twitter_handle)  
+ * body which includes [twitter_handle]  
+ * body which includes @twitter_handle  
+ * 
+ * NB: Double escape template literal RegExp  
+ * NB: Use "g" (global) flag to match all occurrences in the body
+ */
 function isTwitterInBody({ bodyNormalized, source }: { bodyNormalized: string, source: Source }) {
     if (!source.twitterNormalized) {
         return false;
     }
 
-    return new RegExp(`\\b${source.twitterNormalized}\\b`, 'gi').test(bodyNormalized);
+    return new RegExp(`^@?${source.twitterNormalized}:|@${source.twitterNormalized}\\b|(\\(|\\[)${source.twitterNormalized}(\\)|\\])`, 'gi').test(bodyNormalized);
 }
 
 export const __test__ = {
