@@ -63,12 +63,32 @@ Devvit.addSettings([
     },
     {
         type: 'boolean',
-        name: 'analyzePostBody',
-        label: 'Analyze post body for source names and twitter handles (non-links)',
-        helpText: 'If enabled, the bot will analyze the post body for source names and twitter handles (non-links).',
-        defaultValue: false,
+        name: 'analyzeNamesInBody',
+        label: 'Analyze post body for source names',
+        helpText: 'If enabled, the bot will analyze the post body for source names.',
+        defaultValue: true,
         onValidate: ({ value }) => {
-            return validateSetting('analyzePostBody', value);
+            return validateSetting('analyzeNamesInBody', value);
+        }
+    },
+    {
+        type: 'boolean',
+        name: 'analyzeTwitterInBody',
+        label: 'Analyze post body for twitter handles',
+        helpText: 'If enabled, the bot will analyze the post body for twitter handles.',
+        defaultValue: true,
+        onValidate: ({ value }) => {
+            return validateSetting('analyzeTwitterInBody', value);
+        }
+    },
+    {
+        type: 'boolean',
+        name: 'analyzeLinksInBody',
+        label: 'Analyze post body for domain names',
+        helpText: 'If enabled, the bot will analyze the post body for links.',
+        defaultValue: true,
+        onValidate: ({ value }) => {
+            return validateSetting('analyzeLinksInBody', value);
         }
     },
     {
@@ -121,5 +141,21 @@ Devvit.addTrigger({
         }
     }
 });
+
+// Devvit.addMenuItem({
+//     label: 'Debug Post',
+//     location: 'post',
+//     async onPress(event, context) {
+//         const post = await context.reddit.getPostById(event.targetId);
+//         const postData = processPost(post);
+
+//         const settings = await getAllSettings(context);
+
+//         const sources = findSourcesInPost(postData, settings);
+
+//         console.log('found the following sources:');
+//         console.log(sources);
+//     },
+// });
 
 export default Devvit;

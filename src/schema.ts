@@ -94,11 +94,9 @@ export const settingsSchema = z.object({
     flairTemplateId: z.string(),
     flairCssClass: z.string(),
     commentFooter: z.string(),
-    analyzePostBody: z.boolean(),
+    analyzeNamesInBody: z.boolean(),
+    analyzeTwitterInBody: z.boolean(),
+    analyzeLinksInBody: z.boolean(),
     ignoredUsers: z.preprocess((data, ctx) => preprocessCommaSeparated(data, ctx), z.array(z.string())),
     errorReportSubredditName: z.string(),
 });
-
-
-
-

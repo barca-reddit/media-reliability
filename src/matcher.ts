@@ -9,12 +9,12 @@ export function findSourcesInPost(post: PostData, settings: AppSettings) {
         findMatchesInUrl(post.url, settings.sources, list);
     }
 
-    if (post.links) {
+    if (post.links && settings.analyzeLinksInBody) {
         findMatchesInLinks(post.links, settings.sources, list);
     }
 
-    if (post.bodyNormalized && settings.analyzePostBody) {
-        findMatchesInBody(post.bodyNormalized, settings.sources, list);
+    if (post.bodyNormalized && (settings.analyzeNamesInBody || settings.analyzeTwitterInBody)) {
+        findMatchesInBody(post.bodyNormalized, settings, list);
     }
 
     const result = Array
@@ -57,12 +57,12 @@ function findMatchesInLinks(urls: URL[], sources: Source[], list: Map<string, So
     }
 }
 
-function findMatchesInBody(bodyNormalized: string, sources: Source[], list: Map<string, Source>) {
-    for (const source of sources) {
-        if (isNameInBody({ bodyNormalized, source })) {
+function findMatchesInBody(bodyNormalized: string, settings: AppSettings, list: Map<string, Source>) {
+    for (const source of settings.sources) {
+        if (settings.analyzeNamesInBody && isNameInBody({ bodyNormalized, source })) {
             list.set(source.id, source);
         }
-        else if (isTwitterInBody({ bodyNormalized, source })) {
+        else if (settings.analyzeTwitterInBody && isTwitterInBody({ bodyNormalized, source })) {
             list.set(source.id, source);
         }
     }
